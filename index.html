@@ -119,6 +119,25 @@
         .pfb-value {
             font-weight: bold;
         }
+        .copyable {
+            cursor: pointer;
+        }
+        .copy-block {
+    cursor: pointer;
+    position: absolute;
+    right: 10px;
+    font-size: 18px;
+}
+        .copied-tooltip {
+            position: fixed;
+            background: #333;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 1000;
+        }
     </style>
 </head>
 <body class="dark-mode">
@@ -139,7 +158,7 @@
         </div>
 
         <div class="input-group">
-            <label>Brokerage:</label>
+            <label>Brokerage (₹):</label>
             <select id="brokerage">
                 <option value="0">0</option>
                 <option value="5">5</option>
@@ -161,7 +180,7 @@
         </div>
 
         <div class="input-group">
-            <label>Margin Required (%):</label>
+            <label>Margin Required (₹):</label>
             <input type="number" id="marginRequired" step="1">
         </div>
 
@@ -169,22 +188,26 @@
             <div class="divider"></div>
 
             <div class="result-row">
-    <strong>Position Size:</strong>
-    <span>
-        <strong id="positionSize">0</strong>
-        <strong>|</strong>
-        <strong id="halfPositionSize">0</strong>
-    </span>
-</div>
+                <strong>Position Size:</strong>
+                <span>
+                    <strong id="positionSize" class="copyable">0</strong>
+                    <strong>|</strong>
+                    <strong id="halfPositionSize" class="copyable">0</strong>
+                </span>
+            </div>
 
             <div class="result-row">
                 <strong>Price for Breakeven:</strong>
                 <span>
-                    <strong id="breakevenPrice">₹0.00</strong> 
+                    <strong id="breakevenPrice" class="copyable">₹0.00</strong> 
                     <strong>|</strong>
-                    <strong id="pfbValue" class="pfb-value">0</strong>
+                    <strong id="pfbValue" class="pfb-value copyable">0</strong>
                 </span>
             </div>
+
+            <div style="position: relative; margin-bottom: 20px;">
+    <span id="copyAllButton" class="copy-block">📋</span>
+</div>
 
             <div class="divider"></div>
 
@@ -260,6 +283,52 @@
     const breakevenPriceOutput = document.getElementById("breakevenPrice");
     const pfbValueOutput = document.getElementById("pfbValue");
 
+    function showTooltip(text, x, y) {
+    const tooltip = document.createElement('div');
+    tooltip.className = 'copied-tooltip';
+    tooltip.textContent = text;
+    tooltip.style.left = `${x}px`;
+    tooltip.style.top = `${y - 30}px`;
+    document.body.appendChild(tooltip);
+    setTimeout(() => tooltip.remove(), 1000);
+}
+
+function copyToClipboard(text, event) {
+    // Create temporary textarea
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    
+    try {
+        // Select and copy text
+        textarea.select();
+        textarea.setSelectionRange(0, 99999);
+        document.execCommand('copy');
+        
+        // Show success tooltip
+        showTooltip('Copied!', event.clientX, event.clientY);
+    } catch (err) {
+        console.error('Failed to copy:', err);
+        showTooltip('Failed to copy', event.clientX, event.clientY);
+    } finally {
+        // Clean up
+        document.body.removeChild(textarea);
+    }
+}
+
+function copyAllValues(event) {
+    const posSize = document.getElementById('positionSize').textContent;
+    const halfPos = document.getElementById('halfPositionSize').textContent;
+    const breakPrice = document.getElementById('breakevenPrice').textContent;
+    const pfbVal = document.getElementById('pfbValue').textContent;
+    
+    const textToCopy = `Position Size: ${posSize} | ${halfPos}\nPrice for Breakeven: ${breakPrice} | ${pfbVal}`;
+    
+    copyToClipboard(textToCopy, event);
+}
+
     function toggleDarkMode() {
         document.body.classList.toggle("dark-mode");
         document.body.classList.toggle("light-mode");
@@ -275,32 +344,26 @@
         const adjustedBuyPrice = parseFloat(buyPrice) + parseFloat(slippage);
         const brokerageCost = brokerage * 2;
 
-        // Buy side calculations
         const buyValue = adjustedBuyPrice * qty;
         const sttBuy = buyValue * 0.001;
         const transBuy = buyValue * 0.0000297;
         const sebiBuy = buyValue * 0.000001;
         const stampDuty = buyValue * 0.00015;
 
-        // Calculate initial breakeven price estimate
         let breakevenPrice = adjustedBuyPrice + (brokerageCost / qty);
         
-        // Sell side calculations using estimated breakeven price
         const sellValue = breakevenPrice * qty;
         const sttSell = sellValue * 0.001;
         const transSell = sellValue * 0.0000297;
         const sebiSell = sellValue * 0.000001;
 
-        // GST calculation
         const gst = (brokerageCost + transBuy + transSell + sebiBuy + sebiSell) * 0.18;
 
-        // Interest and fixed charges
         const fundedAmount = (buyValue - (marginRequired * qty));
         const interestCharges = (fundedAmount * 0.0004 * holdingDays);
         const pledgeCharges = 35.4;
         const dpCharges = 15.34;
 
-        // Slippage percentage calculation
         const slippageCharges = (adjustedBuyPrice + breakevenPrice) * qty * (slippagePercentage / 100);
 
         const totalCharges = brokerageCost + sttBuy + sttSell + transBuy + transSell + 
@@ -380,13 +443,22 @@
         
         const netPnl = grossPnl - totalCharges;
 
-        // Update UI
+        // Update UI with click-to-copy functionality
         positionSizeOutput.textContent = positionSize;
-        document.getElementById('halfPositionSize').textContent = halfPosition;
+        positionSizeOutput.onclick = (e) => copyToClipboard(positionSize.toString(), e);
+
+        const halfPositionElement = document.getElementById('halfPositionSize');
+        halfPositionElement.textContent = halfPosition;
+        halfPositionElement.onclick = (e) => copyToClipboard(halfPosition.toString(), e);
+
+        breakevenPriceOutput.textContent = `₹${breakevenPrice}`;
+        breakevenPriceOutput.onclick = (e) => copyToClipboard(breakevenPrice.toString(), e);
+
+        pfbValueOutput.textContent = pointsForBreakeven;
+        pfbValueOutput.onclick = (e) => copyToClipboard(pointsForBreakeven.toString(), e);
+
         grossPnlOutput.textContent = `₹${grossPnl.toFixed(2)}`;
         totalChargesOutput.textContent = `₹${totalCharges.toFixed(2)}`;
-        breakevenPriceOutput.textContent = `₹${breakevenPrice}`;
-        pfbValueOutput.textContent = `${pointsForBreakeven}`;
         netPnlOutput.textContent = `₹${netPnl.toFixed(2)}`;
 
         // Update charges breakdown
@@ -410,7 +482,7 @@
     brokerageInput.addEventListener("change", calculatePositionSize);
     holdingDaysInput.addEventListener("input", calculatePositionSize);
     marginRequiredInput.addEventListener("input", calculatePositionSize);
-
-</script>
+    document.getElementById('copyAllButton').onclick = copyAllValues;
+    </script>
 </body>
 </html>
