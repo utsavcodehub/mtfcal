@@ -75,6 +75,7 @@
             border-top: 1px solid #666;
             margin-top: 20px;  
             margin-bottom: 20px;  
+            position: relative;
         }
         .result-row {
             display: flex;
@@ -123,11 +124,11 @@
             cursor: pointer;
         }
         .copy-block {
-    cursor: pointer;
-    position: absolute;
-    right: 10px;
-    font-size: 18px;
-}
+            cursor: pointer;
+            position: absolute;
+            right: 10px;
+            font-size: 18px;
+        }
         .copied-tooltip {
             position: fixed;
             background: #020409;
@@ -175,6 +176,11 @@
         </div>
 
         <div class="input-group">
+            <label>Half Quantity:</label>
+            <input type="number" id="halfQuantity" value="0" step="1">
+        </div>
+
+        <div class="input-group">
             <label>Buy Price (₹):</label>
             <input type="number" id="buyPrice" step="0.01">
         </div>
@@ -184,9 +190,13 @@
             <input type="number" id="marginRequired" step="1">
         </div>
 
-        <div class="result">
+        <div style="position: relative; margin-bottom: 30px;">
+    <span id="copyInputsButton" class="copy-block">📋</span>
+          </div>
+
             <div class="divider"></div>
 
+        <div class="result">
             <div class="result-row">
                 <strong>Position Size:</strong>
                 <span>
@@ -204,10 +214,6 @@
                     <strong id="pfbValue" class="pfb-value copyable">0</strong>
                 </span>
             </div>
-
-            <div style="position: relative; margin-bottom: 20px;">
-    <span id="copyAllButton" class="copy-block">📋</span>
-</div>
 
             <div class="divider"></div>
 
@@ -267,7 +273,6 @@
             </div>
         </div>
     </div>
-
     <script>
     const capitalInput = document.getElementById("capital");
     const slippageInput = document.getElementById("slippage");
@@ -276,6 +281,7 @@
     const brokerageInput = document.getElementById("brokerage");
     const holdingDaysInput = document.getElementById("holdingDays");
     const marginRequiredInput = document.getElementById("marginRequired");
+    const halfQuantityInput = document.getElementById("halfQuantity");
     const positionSizeOutput = document.getElementById("positionSize");
     const grossPnlOutput = document.getElementById("grossPnl");
     const totalChargesOutput = document.getElementById("totalCharges");
@@ -284,50 +290,51 @@
     const pfbValueOutput = document.getElementById("pfbValue");
 
     function showTooltip(text, x, y) {
-    const tooltip = document.createElement('div');
-    tooltip.className = 'copied-tooltip';
-    tooltip.textContent = text;
-    tooltip.style.left = `${x}px`;
-    tooltip.style.top = `${y - 30}px`;
-    document.body.appendChild(tooltip);
-    setTimeout(() => tooltip.remove(), 1000);
-}
-
-function copyToClipboard(text, event) {
-    // Create temporary textarea
-    const textarea = document.createElement('textarea');
-    textarea.value = text;
-    textarea.style.position = 'fixed';
-    textarea.style.opacity = '0';
-    document.body.appendChild(textarea);
-    
-    try {
-        // Select and copy text
-        textarea.select();
-        textarea.setSelectionRange(0, 99999);
-        document.execCommand('copy');
-        
-        // Show success tooltip
-        showTooltip('Copied!', event.clientX, event.clientY);
-    } catch (err) {
-        console.error('Failed to copy:', err);
-        showTooltip('Failed to copy', event.clientX, event.clientY);
-    } finally {
-        // Clean up
-        document.body.removeChild(textarea);
+        const tooltip = document.createElement('div');
+        tooltip.className = 'copied-tooltip';
+        tooltip.textContent = text;
+        tooltip.style.left = `${x}px`;
+        tooltip.style.top = `${y - 30}px`;
+        document.body.appendChild(tooltip);
+        setTimeout(() => tooltip.remove(), 1000);
     }
-}
 
-function copyAllValues(event) {
-    const posSize = document.getElementById('positionSize').textContent;
-    const halfPos = document.getElementById('halfPositionSize').textContent;
-    const breakPrice = document.getElementById('breakevenPrice').textContent;
-    const pfbVal = document.getElementById('pfbValue').textContent;
-    
-    const textToCopy = `Position Size: ${posSize} | ${halfPos}\nPrice for Breakeven: ${breakPrice} | ${pfbVal}`;
-    
-    copyToClipboard(textToCopy, event);
-}
+    function copyToClipboard(text, event) {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        
+        try {
+            textarea.select();
+            textarea.setSelectionRange(0, 99999);
+            document.execCommand('copy');
+            showTooltip('Copied!', event.clientX, event.clientY);
+        } catch (err) {
+            console.error('Failed to copy:', err);
+            showTooltip('Failed to copy', event.clientX, event.clientY);
+        } finally {
+            document.body.removeChild(textarea);
+        }
+    }
+
+    function copyAllValues(event) {
+        const posSize = document.getElementById('positionSize').textContent;
+        const halfPos = document.getElementById('halfPositionSize').textContent;
+        const breakPrice = document.getElementById('breakevenPrice').textContent;
+        const pfbVal = document.getElementById('pfbValue').textContent;
+        
+        const textToCopy = `Position Size: ${posSize} | ${halfPos}\nPrice for Breakeven: ${breakPrice} | ${pfbVal}`;
+        copyToClipboard(textToCopy, event);
+    }
+
+    document.getElementById('copyInputsButton').onclick = (event) => {
+        const buyPrice = buyPriceInput.value;
+        const marginReq = marginRequiredInput.value;
+        const textToCopy = `Buy Price: ${buyPrice}\nMargin Required: ${marginReq}`;
+        copyToClipboard(textToCopy, event);
+    };
 
     function toggleDarkMode() {
         document.body.classList.toggle("dark-mode");
@@ -383,7 +390,8 @@ function copyAllValues(event) {
         const capital = parseFloat(capitalInput.value) || 0;
         const marginRequired = parseFloat(marginRequiredInput.value) || 20;
         const positionSize = Math.round(capital / marginRequired);
-        const halfPosition = Math.ceil(positionSize / 2);
+        const customHalfQuantity = parseFloat(halfQuantityInput.value);
+        const halfPosition = customHalfQuantity ? Math.ceil(customHalfQuantity / 2) : Math.ceil(positionSize / 2);
         
         const slippage = parseFloat(slippageInput.value) || 0;
         const slippagePercentage = parseFloat(slippagePercentageInput.value) || 0;
@@ -482,6 +490,7 @@ function copyAllValues(event) {
     brokerageInput.addEventListener("change", calculatePositionSize);
     holdingDaysInput.addEventListener("input", calculatePositionSize);
     marginRequiredInput.addEventListener("input", calculatePositionSize);
+    halfQuantityInput.addEventListener("input", calculatePositionSize);
     document.getElementById('copyAllButton').onclick = copyAllValues;
     </script>
 </body>
