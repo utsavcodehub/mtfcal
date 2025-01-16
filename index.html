@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MTF Calculator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #333;
+            color: #f0f0f0;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        body.light-mode {
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .light-mode .calculator {
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .light-mode label {
+            color: #333;
+        }
+        .light-mode input, .light-mode select {
+            background-color: white;
+            color: #333;
+            border: 1px solid #ccc;
+        }
+        .light-mode .result-row {
+            color: #333;
+        }
+        .light-mode #chargesBreakdown {
+            background-color: #f0f1f1;
+        }
+        .calculator {
+            background-color: #444;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(255,255,255,0.1);
+            position: relative;
+        }
+        h2 {
+            text-align: center;
+            font-weight: bold;
+            text-decoration: underline;
+        }
+        .input-group {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+        label {
+            display: inline-block;
+            width: 200px;
+            font-weight: bold;
+            color: #f0f0f0;
+        }
+        input, select {
+            width: 150px;
+            padding: 5px;
+            margin: 5px;
+            background-color: #555;
+            color: #f0f0f0;
+            border: 1px solid #666;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .result {
+            margin-top: 20px;
+        }
+        .divider {
+            border-top: 1px solid #666;
+            margin-top: 20px;  
+            margin-bottom: 20px;  
+        }
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+        }
+        .mode-toggle {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+        .mode-toggle:hover {
+            transform: scale(1.2);
+        }
+        #chargesBreakdown {
+            background-color: #555;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 5px;
+        }
+        .charges-breakdown-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+        }
+        .charges-link {
+            margin-left: 5px;
+            font-size: 0.8em;
+            font-style: italic;
+            text-decoration: underline;
+            color: #1a73e8;
+            cursor: pointer;
+        }
+        .output-value {
+            font-weight: normal;
+        }
+        .pfb-value {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body class="dark-mode">
+    <div class="calculator">
+        <button class="mode-toggle" onclick="toggleDarkMode()">☀️</button>
+        <h2>MTF Calculator</h2>
+
+        <div class="input-group">
+            <label>Capital Allocated (₹):</label>
+            <input type="number" id="capital" value="100000" step="1">
+        </div>
+
+        <div class="input-group">
+            <label>Slippage (₹):</label>
+            <input type="number" id="slippagePercentage" value="0" step="0.01" style="width: 100px;">
+            <span>%</span>
+            <input type="number" id="slippage" value="0" step="0.1" style="width: 100px; margin-left: 10px;">
+        </div>
+
+        <div class="input-group">
+            <label>Brokerage:</label>
+            <select id="brokerage">
+                <option value="0">0</option>
+                <option value="5">5</option>
+                <option value="7">7</option>
+                <option value="10">10</option>
+                <option value="15">15</option>
+                <option value="20" selected>20</option>
+            </select>
+        </div>
+
+        <div class="input-group">
+            <label>Holding Days:</label>
+            <input type="number" id="holdingDays" value="0" step="1">
+        </div>
+
+        <div class="input-group">
+            <label>Buy Price (₹):</label>
+            <input type="number" id="buyPrice" step="0.01">
+        </div>
+
+        <div class="input-group">
+            <label>Margin Required (%):</label>
+            <input type="number" id="marginRequired" step="1">
+        </div>
+
+        <div class="result">
+            <div class="divider"></div>
+
+            <div class="result-row">
+    <strong>Position Size:</strong>
+    <span>
+        <strong id="positionSize">0</strong>
+        <strong>|</strong>
+        <strong id="halfPositionSize">0</strong>
+    </span>
+</div>
+
+            <div class="result-row">
+                <strong>Price for Breakeven:</strong>
+                <span>
+                    <strong id="breakevenPrice">₹0.00</strong> 
+                    <strong>|</strong>
+                    <strong id="pfbValue" class="pfb-value">0</strong>
+                </span>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="result-row">
+                <span>Gross P&L:</span>
+                <span id="grossPnl" class="output-value">₹0.00</span>
+            </div>
+            <div class="result-row">
+                <span>Charges:<span class="charges-link" onclick="toggleChargesBreakdown()">View Breakdown</span></span>
+                <span id="totalCharges" class="output-value">₹0.00</span>
+            </div>
+            <div id="chargesBreakdown" style="display: none;">
+                <div class="result-row">
+                    <span>Brokerage:</span>
+                    <span id="brokerageCharges">₹0.00</span>
+                </div>
+                <div class="result-row">
+                    <span>Slippage Charges:</span>
+                    <span id="slippageCharges">₹0.00</span>
+                </div>
+                <div class="result-row">
+                    <span>STT (0.1%):</span>
+                    <span id="sttCharges">₹0.00</span>
+                </div>
+                <div class="result-row">
+                    <span>Transaction Charges (0.00297%):</span>
+                    <span id="transactionCharges">₹0.00</span>
+                </div>
+                <div class="result-row">
+                    <span>SEBI Charges (0.0001%):</span>
+                    <span id="sebiCharges">₹0.00</span>
+                </div>
+                <div class="result-row">
+                    <span>Stamp Duty (0.015%):</span>
+                    <span id="stampDutyCharges">₹0.00</span>
+                </div>
+                <div class="result-row">
+                    <span>GST (18%):</span>
+                    <span id="gstCharges">₹0.00</span>
+                </div>
+                <div class="result-row">
+                    <span>Interest Charges:</span>
+                    <span id="interestCharges">₹0.00</span>
+                </div>
+                <div class="result-row">
+                    <span>Pledge Charges:</span>
+                    <span id="pledgeCharges">₹35.40</span>
+                </div>
+                <div class="result-row">
+                    <span>DP Charges:</span>
+                    <span id="dpCharges">₹15.34</span>
+                </div>
+            </div>
+            <div class="result-row">
+                <span>Net P&L:</span>
+                <span id="netPnl" class="output-value">₹0.00</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    const capitalInput = document.getElementById("capital");
+    const slippageInput = document.getElementById("slippage");
+    const slippagePercentageInput = document.getElementById("slippagePercentage");
+    const buyPriceInput = document.getElementById("buyPrice");
+    const brokerageInput = document.getElementById("brokerage");
+    const holdingDaysInput = document.getElementById("holdingDays");
+    const marginRequiredInput = document.getElementById("marginRequired");
+    const positionSizeOutput = document.getElementById("positionSize");
+    const grossPnlOutput = document.getElementById("grossPnl");
+    const totalChargesOutput = document.getElementById("totalCharges");
+    const netPnlOutput = document.getElementById("netPnl");
+    const breakevenPriceOutput = document.getElementById("breakevenPrice");
+    const pfbValueOutput = document.getElementById("pfbValue");
+
+    function toggleDarkMode() {
+        document.body.classList.toggle("dark-mode");
+        document.body.classList.toggle("light-mode");
+        modeToggle.textContent = document.body.classList.contains("dark-mode") ? "☀️" : "🌙";
+    }
+
+    function toggleChargesBreakdown() {
+        const chargesBreakdown = document.getElementById('chargesBreakdown');
+        chargesBreakdown.style.display = chargesBreakdown.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function calculateBreakevenPrice(buyPrice, qty, brokerage, slippage, holdingDays, capital, marginRequired, slippagePercentage) {
+        const adjustedBuyPrice = parseFloat(buyPrice) + parseFloat(slippage);
+        const brokerageCost = brokerage * 2;
+
+        // Buy side calculations
+        const buyValue = adjustedBuyPrice * qty;
+        const sttBuy = buyValue * 0.001;
+        const transBuy = buyValue * 0.0000297;
+        const sebiBuy = buyValue * 0.000001;
+        const stampDuty = buyValue * 0.00015;
+
+        // Calculate initial breakeven price estimate
+        let breakevenPrice = adjustedBuyPrice + (brokerageCost / qty);
+        
+        // Sell side calculations using estimated breakeven price
+        const sellValue = breakevenPrice * qty;
+        const sttSell = sellValue * 0.001;
+        const transSell = sellValue * 0.0000297;
+        const sebiSell = sellValue * 0.000001;
+
+        // GST calculation
+        const gst = (brokerageCost + transBuy + transSell + sebiBuy + sebiSell) * 0.18;
+
+        // Interest and fixed charges
+        const fundedAmount = (buyValue - (marginRequired * qty));
+        const interestCharges = (fundedAmount * 0.0004 * holdingDays);
+        const pledgeCharges = 35.4;
+        const dpCharges = 15.34;
+
+        // Slippage percentage calculation
+        const slippageCharges = (adjustedBuyPrice + breakevenPrice) * qty * (slippagePercentage / 100);
+
+        const totalCharges = brokerageCost + sttBuy + sttSell + transBuy + transSell + 
+                           sebiBuy + sebiSell + stampDuty + gst + 
+                           interestCharges + pledgeCharges + dpCharges + slippageCharges;
+
+        breakevenPrice = adjustedBuyPrice + (totalCharges / qty);
+        const pointsForBreakeven = Math.abs((breakevenPrice - adjustedBuyPrice).toFixed(2));
+
+        return { 
+            breakevenPrice: breakevenPrice.toFixed(2), 
+            pointsForBreakeven: pointsForBreakeven 
+        };
+    }
+
+    function calculatePositionSize() {
+        const capital = parseFloat(capitalInput.value) || 0;
+        const marginRequired = parseFloat(marginRequiredInput.value) || 20;
+        const positionSize = Math.round(capital / marginRequired);
+        const halfPosition = Math.ceil(positionSize / 2);
+        
+        const slippage = parseFloat(slippageInput.value) || 0;
+        const slippagePercentage = parseFloat(slippagePercentageInput.value) || 0;
+        const buyPrice = parseFloat(buyPriceInput.value) || 0;
+        const brokerage = parseFloat(brokerageInput.value) || 0;
+        const holdingDays = parseFloat(holdingDaysInput.value) || 0;
+
+        const adjustedBuyPrice = buyPrice + slippage;
+
+        const { breakevenPrice, pointsForBreakeven } = calculateBreakevenPrice(
+            buyPrice, 
+            positionSize, 
+            brokerage, 
+            slippage,
+            holdingDays,
+            capital,
+            marginRequired,
+            slippagePercentage
+        );
+
+        const sellPrice = parseFloat(breakevenPrice);
+        const grossPnl = (sellPrice - adjustedBuyPrice) * positionSize;
+        
+        // Charges calculations
+        const brokerageCost = brokerage * 2;
+
+        // Buy side calculations
+        const buyValue = adjustedBuyPrice * positionSize;
+        const sttBuy = buyValue * 0.001;
+        const transBuy = buyValue * 0.0000297;
+        const sebiBuy = buyValue * 0.000001;
+        const stampDuty = buyValue * 0.00015;
+
+        // Sell side calculations
+        const sellValue = sellPrice * positionSize;
+        const sttSell = sellValue * 0.001;
+        const transSell = sellValue * 0.0000297;
+        const sebiSell = sellValue * 0.000001;
+
+        // Combined charges
+        const sttCharges = sttBuy + sttSell;
+        const transactionCharges = transBuy + transSell;
+        const sebiCharges = sebiBuy + sebiSell;
+        const slippageCharges = (adjustedBuyPrice + sellPrice) * positionSize * (slippagePercentage / 100);
+        
+        // GST on brokerage + transaction + SEBI charges
+        const gstCharges = (brokerageCost + transactionCharges + sebiCharges) * 0.18;
+
+        const fundedAmount = (buyValue - (marginRequired * positionSize));
+        const interestCharges = (fundedAmount * 0.0004 * holdingDays);
+        const pledgeCharges = 35.4;
+        const dpCharges = 15.34;
+
+        const totalCharges = brokerageCost + sttCharges + transactionCharges + sebiCharges + 
+                           stampDuty + gstCharges + slippageCharges + 
+                           interestCharges + pledgeCharges + dpCharges;
+        
+        const netPnl = grossPnl - totalCharges;
+
+        // Update UI
+        positionSizeOutput.textContent = positionSize;
+        document.getElementById('halfPositionSize').textContent = halfPosition;
+        grossPnlOutput.textContent = `₹${grossPnl.toFixed(2)}`;
+        totalChargesOutput.textContent = `₹${totalCharges.toFixed(2)}`;
+        breakevenPriceOutput.textContent = `₹${breakevenPrice}`;
+        pfbValueOutput.textContent = `${pointsForBreakeven}`;
+        netPnlOutput.textContent = `₹${netPnl.toFixed(2)}`;
+
+        // Update charges breakdown
+        document.getElementById('brokerageCharges').textContent = `₹${brokerageCost.toFixed(2)}`;
+        document.getElementById('slippageCharges').textContent = `₹${slippageCharges.toFixed(2)}`;
+        document.getElementById('sttCharges').textContent = `₹${sttCharges.toFixed(2)}`;
+        document.getElementById('transactionCharges').textContent = `₹${transactionCharges.toFixed(2)}`;
+        document.getElementById('sebiCharges').textContent = `₹${sebiCharges.toFixed(2)}`;
+        document.getElementById('stampDutyCharges').textContent = `₹${stampDuty.toFixed(2)}`;
+        document.getElementById('gstCharges').textContent = `₹${gstCharges.toFixed(2)}`;
+        document.getElementById('interestCharges').textContent = `₹${interestCharges.toFixed(2)}`;
+        document.getElementById('pledgeCharges').textContent = `₹35.40`;
+        document.getElementById('dpCharges').textContent = `₹15.34`;
+    }
+
+    // Add event listeners for inputs
+    capitalInput.addEventListener("input", calculatePositionSize);
+    slippageInput.addEventListener("input", calculatePositionSize);
+    slippagePercentageInput.addEventListener("input", calculatePositionSize);
+    buyPriceInput.addEventListener("input", calculatePositionSize);
+    brokerageInput.addEventListener("change", calculatePositionSize);
+    holdingDaysInput.addEventListener("input", calculatePositionSize);
+    marginRequiredInput.addEventListener("input", calculatePositionSize);
+
+</script>
+</body>
+</html>
