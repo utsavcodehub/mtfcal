@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -330,10 +331,15 @@
     }
 
     document.getElementById('copyInputsButton').onclick = (event) => {
-        const buyPrice = buyPriceInput.value;
-        const marginReq = marginRequiredInput.value;
-        const textToCopy = `Buy Price: ${buyPrice}\nMargin Required: ${marginReq}`;
-        copyToClipboard(textToCopy, event);
+    const buyPrice = buyPriceInput.value;
+    const marginReq = marginRequiredInput.value;
+    const today = new Date();
+    const date = today.getDate().toString().padStart(2, '0');
+    const month = (today.getMonth() + 1).toString().padStart(2, '0');
+    const year = today.getFullYear();
+    const formattedDate = `${date}-${month}-${year}`;
+    const textToCopy = `Buy Price: ${buyPrice}\nMargin Required: ${marginReq}\nDate: ${formattedDate}`;
+    copyToClipboard(textToCopy, event);
     };
 
     function toggleDarkMode() {
